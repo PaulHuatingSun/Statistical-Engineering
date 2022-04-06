@@ -1,0 +1,143 @@
+---
+title: "Project 3: Project3 Tutorial"
+author: Huating Sun
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Project 3: Project3 Tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# 1. Introduction
+
+This package was created for STAT 302 Final Project. It includes the following functions:
+
+* `my_t_test`: A function that performs a one-sample t-test.
+* `my_lm`: A function that fits a linear model.
+* `my_knn_cv`: A function that predicts output from existing variables by using k-nearest neighbors cross-validation.
+
+
+These following tutorials will use data from the dataset `my_penguins`.
+
+# 2. Tutorial for `my_t.test`
+
+```{r setup}
+# Import the created package
+library(Project3)
+# Load the data my_penguins dataset
+data("my_penguins")
+# Remove all the NA values from the my_penguins dataset to avoid errors
+my_penguins <- na.omit(my_penguins)
+```
+
+The function my_t.test() is a function that performs a one-sample t-test in R. 
+
+The function requires the following parameters: 
+
+* `x`: A numeric vector of data, 
+* `alternative`: A character string specifying the alternative hypothesis(accepts "two.sided", "less", "greater")
+* `mu`: A number indicating the null hypothesis value of the mean. 
+
+The function will return the following:
+
+* `test_stat`: The numeric test statistic which tells how different two or more groups are from the overall population mean or how different a linear slope is from the slope predicted by a null hypothesis
+* `df`: The degrees of freedom.
+* `alternative`: The value of the parameter `alternative`, which should be "two.sided", "less", or "greater".
+* `p_val`: The numeric p-value tells how likely the data could have occurred under the null hypothesis.
+
+```{r}
+# Filter to have only Adelie penguins in the dataset
+penguins <- dplyr::filter(my_penguins, species == "Adelie")
+# Compute the t test using alternative method "less"
+my_t.test(penguins$body_mass_g, mu = 4000, alternative = "less")
+```
+
+  \begin{align}
+  H_0: \mu &= 4000,\\
+  H_a: \mu &< 4000.
+  \end{align}
+
+This tutorial wants to test the null hypothesis that the mean body_mass_g of Adelie penguins is equal to 4000 grams (where the alternative is that the mean body mass is less than 4000 grams) using a p-value cutoff of α = 0.05. Since the interest is to find the Adelie penguins' mean body mass, the original my_penguins is filtered to only have the specie Adelie penguins. Based on the interest, the alternative method chosen is "less," and the $\mu$ is 4000.
+
+After computing the result, the p-value is about $7.71e^-13$ which is less than the cutoff at α = 0.05. Since the p-value is less than the alpha, the null hypothesis is rejected, and the alternative hypothesis is favored. This means that if the mean body mass of Adelie penguins is 4000 grams and if we sample the same number of Adelie penguins repeatedly, then almost 0% of the samples will result in a sample mean as or farther from 4000 grams than the sample mean we observed.
+
+# 3. Tutorial for `my_lm`
+
+The function my_lm() is a function that fits a linear model in R. It should have the following parameters:
+
+* `formula`: A formula class object, similar to lm().
+* `data`: Input data frame.
+
+The function should return a table that includes the following:
+
+* `Estimate`: Also known as coefficients, the size of the coefficient for each independent variable gives the size of the effect that variable is having on the dependent variable.
+* `Std. Error`: Standard error represents the average distance that the observed values fall from the linear regression line.
+* `t value`: A coefficient calculated by dividing coefficient by the standard error.
+* `p value`: A statistical test that determines the probability of extreme results of the statistical hypothesis test, assuming the null hypothesis is correct.
+
+```{r}
+# Compute the linear regression model using body_mass_g as dependent variable 
+# and flipper_length_mm as independent variable
+my_lm(body_mass_g ~ flipper_length_mm, data = my_penguins)
+```
+
+For this tutorial, `flipper_length_mm` is used as the independent variable and `body_mass_g` as the dependent variable. For this interest, the formula for the my_lm() function is `body_mass_g ~ flipper_length_mm`, and the data is `my_penguins`.
+
+  \begin{align}
+  H_0: \beta = 0,\\
+  H_a: \beta \neq 0.
+  \end{align}
+
+
+After fitting the linear model, it is found that when the flipper length of penguins is 0, their body mass is about -5872 grams. However, this does not make sense in reality as penguins cannot have a flipper length of 0, nor can they have a negative body mass. Thus, the coefficient of the intercept is meaningless. The coefficient of the flipper_length_mm indicates that for every unit increase in the flipper length, the penguin's body mass increases about 50 grams.
+
+In terms of the hypothesis test, since the p value is much smaller than the given p-value cut-off of α = 0.05. This means that the result is statistically significant and the null hypothesis is rejected. As a result, the `flipper_length_mm` coefficient should significantly be able to predict `body_mass_g`.
+
+# 4. Tutorial for `my_knn_cv`
+
+The function my_knn_cv() is a function that predicts output from existing variables by using k-nearest neighbors cross-validation.
+
+The function requires the following parameters:
+
+* `train`: input data frame
+* `cl`: the true class value of your training data
+* `k_nn`: integer representing the number of neighbors
+* `k_cv`: integer representing the number of folds
+
+The function will return a list of objects:
+
+* `class`: a vector of the predicted class $\hat{Y}_{i}$ for all observations
+* `cv_error`: a numeric with the cross-validation misclassification error
+
+```{r}
+# Create three vectors to store the results
+knn_num <- c(1:10)
+training_error <- c(1:10)
+cv_error <- c(1:10)
+
+# Create a for loop to go through different number of neighbors
+for(i in 1:10) {
+  # Run k nearest neighbor through k nearest neighbor from 1 to 10
+  neighbors <- my_knn_cv(my_penguins[ , 3:6], my_penguins$species, i, 5)
+  # Compute the training error
+  training_error[i] <- mean(neighbors[[1]] != my_penguins$species)
+  # Compute the cross-validation error
+  cv_error[i] <- mean(neighbors[[2]])
+}
+# Store the results as a data frame
+results <- data.frame("knn" = knn_num, "training_error" = training_error, "cv_error" = cv_error)
+results
+```
+
+For this tutorial, the interested covariates are `bill_length_mm`, `bill_depth_mm`, `flipper_length_mm`, and `body_mass_g`. It is also interested to use 5-fold cross-validation (`k_cv = 5`) and iterate from `k_nn` from 1 to 10. Also, the training misclassification rate should be recorded in addition to the cross-validation misclassification rates.
+
+After computation, based on the training misclassification rate, the model with only 1 neighbor should be chosen as it has the lowest training misclassification rate among all models. Based on the cross-validation misclassification rate, the model with only 1 neighbor is chosen again as it also has the lowest cross-validation misclassification rate. 
+
+However, in reality, a low training error is often a sign of overfitting which means that the model will perform poorly on data besides the data that was used to train the model. On the other hand, cross-validation is usually a good way to measure an accurate performance. Although it does not prevent the model from overfitting, it still measures a true performance estimate. Thus, based on the cross-validation misclassification rate, the model with only 1 neighbor should still be chosen as it has the lowest misclassification rate among the 10.

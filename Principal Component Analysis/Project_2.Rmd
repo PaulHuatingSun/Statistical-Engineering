@@ -1,0 +1,398 @@
+---
+title: "Project 2: Dimension Reduction"
+author: "Huating Sun"
+date: "02/23/2022"
+output: html_document
+---
+
+## Part 1 
+## my_pca() Function
+```{r}
+#' PCA function that will run PCA on a data matrix
+#' @param X a matrix (or dataframe) to perform PCA on.
+#' @param scale a logical value, can accept either True or False 
+#' @return Returns a list with following elements:
+#' prin_comps: a matrix with the same dimensions as the X matrix that contains the principal component vectors
+#' loadings: a matrix of variable loadings, this should be a square matrix where the number of rows and columns are equal to the number of columns of X
+#' portion_var a vector of variances explained by each principal component
+
+run_pca <- function(X, scale) {
+  # if scale is TRUE, perform PCA on the centered and scaled version of the x dataframe
+  if (scale == TRUE) {
+    # Center and scale the dataframe
+    X <- scale(X, center = T, scale = T)
+    # Get the empirical covariance matrix of data matrix
+    sigma <- cov(X)
+    # Perform the eigendecomposition of a square symmetric matrix
+    eigenvector_sigma <- eigen(sigma)
+    # Extract loadings vectors
+    eigen_sigma_vector <- eigenvector_sigma$vectors
+    # Find principal component vectors by multiplying two matrices together
+    pca_sigma <- as.matrix(X) %*% eigen_sigma_vector
+    # Calculate the explained variances
+    variances <- eigenvector_sigma$values
+    # Return the list of elements
+    return(list(prin_comps = pca_sigma, loadings = eigen_sigma_vector, portion_var = variances))
+  }
+  # if scale is FALSE, perform PCA on the centered and non-scaled version of the x dataframe
+  else {
+    # Center and not scale the dataframe
+    X <- scale(X, center = T, scale = F)
+    # Get the empirical covariance matrix of data matrix
+    sigma <- cov(X)
+    # Perform the eigendecomposition of a square symmetric matrix
+    eigenvector_sigma <- eigen(sigma)
+    # Extract loadings vectors
+    eigen_sigma_vector <- eigenvector_sigma$vectors
+    # Find principal component vectors by multiplying two matrices together
+    pca_sigma <- as.matrix(X) %*% eigen_sigma_vector
+    # Calculate the explained variances
+    variances <- eigenvector_sigma$values
+    # Return the list of elements
+    return(list(prin_comps = pca_sigma, loadings = eigen_sigma_vector, portion_var = variances))
+  }
+}
+```
+
+## my_pca() Test: Scale = TRUE
+```{r, include = FALSE, echo = FALSE}
+# Set seed to fix random sequence
+set.seed(302)
+
+# Stimulate a matrix X with 4 rows and 3 columns
+X <- matrix(nrow = 4, ncol = 3)
+X[, 1] <- rnorm(4, mean = 0, sd = 1)
+X[, 2] <- rnorm(4, mean = 0, sd = 10)
+X[, 3] <- rnorm(4, mean = 0, sd = 15)
+```
+
+```{r}
+# display the results of run_pca() when scale is true
+pca_scale <- run_pca(X, scale = TRUE)
+pca_scale
+```
+
+## my_pca() Test: Scale = FALSE
+```{r}
+# Display the results of run_pca() when scale is false
+pca_non_scale <- run_pca(X, scale = FALSE)
+pca_non_scale
+```
+
+## Part 2 
+## Introduction
+In this report, two datasets are used for analysis. Dataset 1 "pca_data-1.csv" includes information about 29 different environment indicators for 180 different countries. Dataset 2 "additional_data-1.csv" includes additional environmental-related data of the 180 different countries. The variable names and the meanings are listed below:
+
+For this project, by reducing the dimensional of the data extracted from the 2020 Environmental Performance Index, a Principal Component Analysis is performed to analyze the relationship between different countries, different environmental indicators, and correlations between indicators and emerging market and least developed countries.
+
+```{r, include=FALSE}
+# Load datasets and libraries
+library(tidyverse)
+library(ggrepel)
+environment_df <- read_csv("./pca_data-1.csv")
+country_df <- read_csv("./additional_data-1.csv")
+```
+
+```{r, echo = FALSE}
+# Run PCA using run_pca() and set scale = T. Include all columns except for country
+environment_pca <- run_pca(environment_df[ , -which(names(environment_df) == "country")], scale = TRUE)
+```
+
+## Loadings for the First Two Principal Components:
+```{r, echo = FALSE}
+# Create a loading dataframe that includes the first two columns of loadings from run_pca and the names of the environment indicators
+loading_df <- data.frame(first_loading = environment_pca$loadings[, 1],
+                         second_loading = environment_pca$loadings[, 2],
+                         prin_comp = colnames(environment_df)[colnames(environment_df) != "country"])
+
+# Plot the loadings for the first two principal components.
+ggplot(loading_df, 
+       aes(x = first_loading, y = second_loading, label = prin_comp)) + 
+  geom_point(size = 2) + 
+  geom_text_repel(box.padding = 0.5, size = 3) +
+  labs(x = "Loadings of Principal Component 1", 
+       y = "Loadings of Principal Component 2",
+       title = "Loadings for the First Two Principal Components") + 
+  theme_bw(base_size = 12) + 
+  theme(plot.title = 
+          element_text(hjust = 0.5))
+```
+
+Figure 1: This plot shows the loadings for the first two principal components. The x-axis represents the loadings for the first principal component, and the y-axis represents the loadings for the second principal component. The labels of points are different environmental indicators for 180 countries.
+
+Analysis:
+
+In a Principal Component Analysis (PCA), positive loadings indicate a variable and a principal component are positively correlated, and negative loadings indicate a negative correlation. Large loadings indicate that a variable strongly affects that principal component. As we can see in figure 1, about half of the loadings are positive along the y-axis, indicating that those variables positively correlate with the second principal component. The other half has a negative correlation with the second principal component. Along the x-axis, most of the loadings are negative, which indicates those variables have a negative correlation with the first principal component and the other variables have a positive correlation with the first principal component. That is why there are many points in the graph clustered in the upper-left, with fewer points spread in the other places.
+
+There are several variables that are noteworthy. First, Green House Gas emissions per capita (GHP) seems to be the largest one along the x-axis, indicating that GHP strongly affect the first principal component. The other ones are Species Protection Index (SPI), Terrestrial Biome Protection (TBN), and Terrestrial Biome Protection (TBG) which appear to be the largest ones along the y-axis, which indicate that they have strong effects on the second principal component.
+
+## First Two Principal Components:
+
+```{r, echo = FALSE}
+# Create a dataframe that includes the first two columns of prin_comps from run_pca and names of the countries
+princomp_df <- data.frame(princomp1 = environment_pca$prin_comps[, 1],
+                          princomp2 = environment_pca$prin_comps[, 2],
+                          name = country_df$country)
+
+# Create a subset of ten countries to label
+text_df <- princomp_df %>%
+  filter(name %in%
+           c("Australia", "China","Spain", 
+             "France","Greece", "Haiti", 
+             "Peru", "United States of America", 
+             "Russia", "Iran"))
+
+# Plot the first two principal components of the data
+ggplot(princomp_df, 
+       aes(x = princomp1, y = princomp2, label = name)) + 
+  geom_point(size = 1.2) + 
+  geom_text_repel(data = text_df, box.padding = 0.5, size = 3) +
+  labs(x = "Principal Component 1", 
+       y = "Principal Component 2",
+       title = "First Two Principal Components of the Data") + 
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Figure 2: This plot shows the first two principal components of the data. The x-axis represents the first principal component of the data, and the y-axis represents the second principal component of the data. The labels represent the different countries in the data. For better visualization, only ten countries are displayed.
+
+Analysis: 
+
+The plot only has two principal components, which means that the 29 environment indicators are turned into 2 dimension information. Within the 10 countries picked, China and Iran have high principal component 1 values, and the other countries have relatively low values for the first principal component. Scoring highly on a single component means that the original variable values for these countries are overwhelmingly explained by a single component. Most of the countries have a correlation with the second principal component around the absolute value of 2.5. 
+
+In terms of similarity, France, Australia, the United States of America, Greece, and Spain are relatively close to each other on the graph, indicating similar environmental performance. China and Iran also have relatively identical environmental performances. Not much can be said about Russia, Peru, and Haiti since their distances are far from each other and other counties labeled on the graph.
+
+
+## Ideal Number of Principal Components
+
+```{r, echo = FALSE}
+# Create a dataframe that includes the explained variance from the run_pca and number of principal components
+var_df <- data.frame(explained_var = environment_pca$portion_var,
+                     num_prin_comp = 1:29)
+
+# Make a scree plot for the proportion of variance explained by each principal component
+var_df %>%
+  ggplot(aes(x = num_prin_comp,y = explained_var, group = 1)) +
+  geom_point(size = 3) +
+  geom_line() +
+  labs(x = "Number of Principal Components", 
+       y = "Variances (Explained by Each Principal Component)",
+       title = "Scree plot: Proportion of Variance Explained by Each Principal Component") +
+  theme_bw(base_size = 12) +
+  scale_x_continuous(labels = var_df$num_prin_comp, breaks = var_df$num_prin_comp)
+```
+
+Figure 3: This plot shows the proportion of variances explained by each principal component. The x-axis represents the number of principal components, and the y-axis represents the variances explained by each principal component.
+
+Analysis: 
+
+The ideal number of principal components for the dataset is determined by eyeballing the scree plot above. A point at which the proportion of variance explained by each subsequent principal component drops off is needed to determine the ideal number of principal components to use for the dataset. For this plot, it seems like there is a more or less pronounced drop-off after the third principal component. Thus, based on the scree plot, the ideal number of principal components to use for the dataset should be the first three principal components to represent the dataset.
+
+## Projection of Least Developed Countries onto First Two Principal Components
+
+```{r, echo = FALSE}
+# Join the two dataframes together
+join_df <- left_join(environment_df, country_df, by = "country")
+```
+
+```{r, echo = FALSE}
+# Create a plot that projects the least developed countries onto first two principal components
+ggplot(princomp_df, 
+       aes(x = princomp1, y = princomp2, color = as.factor(join_df$ldc))) + 
+  geom_point(size = 3) + 
+  geom_vline(xintercept = 2) +
+  labs(x = "Principal Component 1", 
+       y = "Principal Component 2",
+       title = "Least Developed Countries - First Two Principal Components",
+       color = "Countries") + 
+  scale_colour_discrete(labels = c("Others", "Least Developed")) +
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Figure 4: This plot shows the projection of least developed countries onto the First Two Principal Components graph. The x-axis represents the first principal component, and the y-axis represents the second principal component. Each dot on the graph represents a country where blue represents the least developed countries and red represents all other countries.
+
+Analysis:
+
+The plot shows that all of the least developed countries have high first principal component values and spread more along the y-axis, which represents the second principal component. If a vertical line is drawn near the value 2 on the x-axis, the plot will have most of the least developed countries on the right and the other countries on the left of the plot. This may indicate that the PCA is doing a great job at summarizing the information because it got an almost perfect separation between the two different types of countries.
+
+## Projection of Emerging Market Countries onto First Two Principal Components
+
+```{r, echo = FALSE}
+# Create a plot that projects Emerging Market Countries onto First Two Principal Components
+ggplot(princomp_df, 
+       aes(x = princomp1, y = princomp2, color = as.factor(join_df$emmrkt))) + 
+  geom_point(size = 3) + 
+  labs(x = "Principal Component 1", 
+       y = "Principal Component 2",
+       title = "Emerging Markets - First Two Principal Components",
+       color = "Countries") + 
+  scale_colour_discrete(labels = c("Others", "Emerging Markets")) +
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Figure 5: This plot shows the projection of emerging markets countries on to the First Two Principal Components graph. The x-axis represents the first principal component, and the y-axis represents the second principal component. Each dot on the graph represents a country where blue represents the countries with emerging markets and red represents all other countries.
+
+Analysis:
+
+From the graph, it appears that there is no clear relationship between whether or not a country has an emerging market and its environmental factors measured by the first two principal components. This may indicate that other variables in dataset 2 might have a stronger relationship with the first two principal components.
+
+## First Principal Component vs. Environmental Performance Index (EPI)
+```{r, echo = FALSE}
+# Create a graph that compares the first principal component to the variable EPI in the second dataset
+ggplot(princomp_df, aes(x = country_df$EPI_cat, y = princomp1)) + 
+  geom_point(size = 1.2) + 
+  labs(x = "Environmental Performance Index", 
+       y = "Principal Component 1",
+       title = "First Principal Component vs. Environmental Performance Index") + 
+  geom_smooth(method = "lm", formula = y~x) +
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Figure 6：This plot compares the first principal component and the environmental performance index. The x-axis represents the environmental performance index, and the y-axis represents the first principal component. The blue line represents the best-fitted line for the graph.
+
+Analysis: 
+
+Based on the Environmental Performance Index (EPI) table provided in the 2020 Environmental Performance Index Report, we can see that the Principal Component Analysis (PCA) has all indicators that are used in the composite indicator of international environment performance except for three indicators: Fish Stock Status (FSS), Regional Marine Tropic Index (RMS), and Fish Caught by Trawling (FGT). Although not all the indicators are considered in this PCA, the three indicators missing only weigh 6 percent of the EPI score. Considering how similar the indicators are evaluated in both PCA and EPI, the first principal component is expected to be similar to the EPI measure.
+
+After checking the plot generated above, we do see a very strong negative linear relationship (confirmed by the linear line). To check whether they are similar or not, how far each element of the data (countries in this case) are spaced along with Principal Component 1 is checked. The different elements on the graph seem to be very close to each other, indicating that the first principal component is indeed similar to the EPI measure.
+
+## Conclusion
+
+In conclusion, after conducting the Principal Component Analysis to analyze the relationship between different countries, environmental indicators, and correlations between indicators and emerging market and least developed countries. There are several findings that are noteworthy. 
+
+First, Green House Gas emissions per capita (GHP) seem to be the largest one along the x-axis, which indicates that GHP has a strong effect on the first principal component. Species Protection Index (SPI), Terrestrial Biome Protection (TBN), and Terrestrial Biome Protection (TBG), which appear to be the largest ones along the y-axis, which indicate that they have strong effects on the second principal component. 
+
+Second, France, Australia, the United States of America, Greece, and Spain are relatively close to each other on the graph, indicating that they have similar environmental performance. China and Iran also have relatively similar environmental performances. Not much can be said about Russia, Peru, and Haiti since their distances are far from each other and other counties labeled on the graph. 
+
+Third, after making a scree plot of the proportion of variances explained by each principal component, it is identified that the ideal number of principal components to use for the dataset should be the first three principal components to represent the dataset.
+
+Fourth, after projecting the least developed countries onto the first two principal components, it is found that the PCA is doing a great job at summarizing the information because it got almost perfect separation between least developed countries and other countries.
+
+Fifth, after projecting countries with emerging markets onto the first two principal components, no clear pattern is observed, which means that there might be other variables in dataset 2 that might have a stronger relationship with the first two principal components.
+
+Lastly, after plotting the comparison between the first principal component and the environmental performance index, it is found that the two have a very strong negative linear relationship. It is found that the first principal component is indeed similar to the EPI measure not only based on the formula but also their spaces between each point on the graph.
+
+# Appendix: All code for this report
+```{r load, eval = FALSE}
+# Load datasets and libraries
+library(tidyverse)
+library(ggrepel)
+environment_df <- read_csv("./pca_data-1.csv")
+country_df <- read_csv("./additional_data-1.csv")
+```
+
+```{r run_pca, eval = FALSE}
+# Run PCA using run_pca() and set scale = T. Include all columns except for country
+environment_pca <- run_pca(environment_df[ , -which(names(environment_df) == "country")], scale = TRUE)
+```
+
+```{r visualiztion 1, eval = FALSE}
+# Create a loading dataframe that includes the first two columns of loadings from run_pca and the names of the environment indicators
+loading_df <- data.frame(first_loading = environment_pca$loadings[, 1],
+                         second_loading = environment_pca$loadings[, 2],
+                         prin_comp = colnames(environment_df)[colnames(environment_df) != "country"])
+
+# Plot the loadings for the first two principal components.
+ggplot(loading_df, 
+       aes(x = first_loading, y = second_loading, label = prin_comp)) + 
+  geom_point(size = 2) + 
+  geom_text_repel(box.padding = 0.5, size = 3) +
+  labs(x = "Loadings of Principal Component 1", 
+       y = "Loadings of Principal Component 2",
+       title = "Loadings for the First Two Principal Components") + 
+  theme_bw(base_size = 12) + 
+  theme(plot.title = 
+          element_text(hjust = 0.5))
+```
+
+```{r visualiztion 2, eval = FALSE}
+# Create a dataframe that includes the first two columns of prin_comps from run_pca and names of the countries
+princomp_df <- data.frame(princomp1 = environment_pca$prin_comps[, 1],
+                          princomp2 = environment_pca$prin_comps[, 2],
+                          name = country_df$country)
+
+# Create a subset of ten countries to label
+text_df <- princomp_df %>%
+  filter(name %in%
+           c("Australia", "China","Spain", 
+             "France","Greece", "Haiti", 
+             "Peru", "United States of America", 
+             "Russia", "Iran"))
+
+# Plot the first two principal components of the data
+ggplot(princomp_df, 
+       aes(x = princomp1, y = princomp2, label = name)) + 
+  geom_point(size = 1.2) + 
+  geom_text_repel(data = text_df, box.padding = 0.5, size = 3) +
+  labs(x = "Principal Component 1", 
+       y = "Principal Component 2",
+       title = "First Two Principal Components of the Data") + 
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r visualiztion 3, eval = FALSE}
+# Create a dataframe that includes the explained variance from the run_pca and number of principal components
+var_df <- data.frame(explained_var = environment_pca$portion_var,
+                     num_prin_comp = 1:29)
+
+# Make a scree plot for the proportion of variance explained by each principal component
+var_df %>%
+  ggplot(aes(x = num_prin_comp,y = explained_var, group = 1)) +
+  geom_point(size = 3) +
+  geom_line() +
+  labs(x = "Number of Principal Components", 
+       y = "Variances (Explained by Each Principal Component)",
+       title = "Scree plot: Proportion of Variance Explained by Each Principal Component") +
+  theme_bw(base_size = 12) +
+  scale_x_continuous(labels = var_df$num_prin_comp, breaks = var_df$num_prin_comp)
+```
+
+```{r join dataframe, eval = FALSE}
+# Join the two dataframes together
+join_df <- left_join(environment_df, country_df, by = "country")
+```
+
+```{r visualiztion 4, eval = FALSE}
+# Create a plot that projects the least developed countries onto first two principal components
+ggplot(princomp_df, 
+       aes(x = princomp1, y = princomp2, color = as.factor(join_df$ldc))) + 
+  geom_point(size = 3) + 
+  geom_vline(xintercept = 2) +
+  labs(x = "Principal Component 1", 
+       y = "Principal Component 2",
+       title = "Least Developed Countries - First Two Principal Components",
+       color = "Countries") + 
+  scale_colour_discrete(labels = c("Others", "Least Developed")) +
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r visualiztion 5, eval = FALSE}
+# Create a plot that projects Emerging Market Countries onto First Two Principal Components
+ggplot(princomp_df, 
+       aes(x = princomp1, y = princomp2, color = as.factor(join_df$emmrkt))) + 
+  geom_point(size = 3) + 
+  labs(x = "Principal Component 1", 
+       y = "Principal Component 2",
+       title = "Emerging Markets - First Two Principal Components",
+       color = "Countries") + 
+  scale_colour_discrete(labels = c("Others", "Emerging Markets")) +
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r visualiztion 6, eval = FALSE}
+# Create a graph that compares the first principal component to the variable EPI in the second dataset
+ggplot(princomp_df, aes(x = country_df$EPI_cat, y = princomp1)) + 
+  geom_point(size = 1.2) + 
+  labs(x = "Environmental Performance Index", 
+       y = "Principal Component 1",
+       title = "First Principal Component vs. Environmental Performance Index") + 
+  geom_smooth(method = "lm", formula = y~x) +
+  theme_bw(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```

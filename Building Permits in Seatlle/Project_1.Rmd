@@ -1,0 +1,403 @@
+---
+title: "Project 1: Data Exploration and Visualization"
+author: "Huating Sun"
+date: "02/02/2022"
+output: html_document
+---
+
+## Introduction
+Today, single-family zoning, which refers to a residential area where only one housing unit can be built on a given parcel of land, compromises nearly half of all developable land within Seattle's boundaries and almost three-quarters of residential areas. There are many potential harms that single-family unit zoning can bring. First, single-family zoning requires more land to be developed to house the growing population, creating competition within the market-causing prices. Due to the high prices of single-family housing units, single-family homes become too expensive for low-income families, disproportionately impacting the Black and Latina communities. The suburbs further residential segregation and concentrate poverty and wealth within distinct regions. Single-family zoning is only the latest iteration of racist housing policy. In this report, the data set we are going to use is the data set provided by Seattle Open Data that includes all building permits issued or in progress within the city of Seattle. The data set contains 22 variables, and we are particularly interested in answering these three questions:
+
+* How has the COVID-19 pandemic impacted the number of issued and completed new residential permits?
+* What is the pattern of new multifamily and single-family permits over the years in Seattle?
+* Where are the issued and completed new multifamily and single-family permits?
+
+Thus, we will use variables that are related to the new residential buildings in this analysis.
+
+```{r, include = FALSE, echo = FALSE}
+# Load tidyverse package 
+library(tidyverse)
+# Load data
+permit_df <- read_csv("./Building_Permits_Clean.csv")
+```
+
+## New Residential Permits Issued Over Time:
+```{r, echo = FALSE}
+# First Visualization ("New Residential Permits Issued Over Time") - Line Plot
+
+# Create a dataframe that contains years and the number of issued residential permits
+num_permits_year <- permit_df %>% 
+  filter(StatusCurrent == "Issued") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  group_by(IssuedYear) %>%
+  summarise(permits_per_year = n())
+# Make a line plot of the number of residential permits issued each year
+ggplot(data = num_permits_year, aes(x = IssuedYear, y = permits_per_year)) + 
+  geom_line(color = "red") +
+  geom_point() +
+  labs(title = "Number of New Residential Permits Issued Each Year",
+       x = "Year",
+       y = "Number of New Residential Permits Issued") +
+   theme_bw()
+```
+
+Figure 1: This plot shows the number of new residential permits that are issued each year.
+
+From this line plot, we can tell that 2017 has the least amount of new residential permits issued, and 2021 has the most amount of new residential permits issued. We can see that the number of new residential permits that are issued increases every single year. This is rather interesting to see. I would expect that as COVID-19 impacted the economy negatively in 2020 and 2021, the number of issued residential permits should be decreasing instead since there is not enough money to build these residential buildings. However, we can see a large increase from 2019 to 2020 and 2020 to 2021. There is a chance that the COVID-19 impacted the economy negatively, and many people have lost their jobs and cannot afford their current housing anymore. The government might have stepped in and decided to permit more residential buildings that cost less so that people could afford the rent.
+
+## New Residential Permits Completed Over Time:
+```{r, echo = FALSE}
+# Second Visualization ("New Residential Permits Completed Over Time") - Line Plot
+
+# Create a dataframe that contains the number of completed new residential permits and years
+completed_residential <- permit_df %>% 
+  filter(StatusCurrent == "Completed") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  group_by(IssuedYear) %>%
+  summarise(completed_permits = n())
+# Make a line plot that shows the number of completed new residential permits each year
+ggplot(data = completed_residential, aes(x = IssuedYear, y = completed_permits)) + 
+  geom_line(color = "red") +
+  geom_point() +
+  labs(title = "Total Number of Completed New Residential Permits per Year",
+       x = "Year",
+       y = "Number of New Completed Residential Permits") +
+   theme_bw()
+```
+
+Figure 2: This plot shows the number of new residential permits that are completed each year.
+
+Suspicious with the number of new residential permits issued during the COVID-19 period, this plot gives us a better understanding of the completed residential permits. There is a general pattern that the total number of completed new residential permits decreases as the year increases. There is a sharp decrease from the year 2019 to 2021. This makes sense since the decline happened during the COVID-19 period. The constructions were most likely stopped or limited because of quarantine policy, financial problems, or other factors. In the year 2021, the number of new residential permits that are completed is close to 0.
+
+## Number of Issued New Residential Permits by Class Over Time:
+```{r, echo = FALSE}
+# Third Visualization ("Number of Issued New Residential Permits by Class Over Time") - Bar Graph
+
+# Make a dataframe that conatins the permit class, issued year, and number of each permit class by year
+issued_permit_class <- permit_df %>% 
+  filter(StatusCurrent == "Issued") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  group_by(PermitClass) %>%
+  count(IssuedYear)
+
+# Make a side by side bar plot that shows the number of issued new permits by class each year
+ggplot(data = issued_permit_class, aes(x = IssuedYear, y = n, fill = PermitClass)) + 
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.75) +
+  labs(title = "Number of Issued New Residential Permits by Class Each Year",
+       x = "Year",
+       y = "Number of Issued New Residential Permits") + 
+  geom_text(aes(label = n), fontface = "bold", vjust = 1.5,
+             position = position_dodge(.9), size = 4) +
+  labs(fill = "Class of Permit") +
+  theme_bw() 
+```
+
+Figure 3: This plot shows the number of new residential permits by class that are issued over time.
+
+Several patterns can be observed from this plot. First, we can see that the number of issued new residential permits has increased over time. Second, the number of issued new residential permits for multifamily is less than that of single-family. In 2021, the number of single-family permits is two times more than the number of multifamily permits. As discussed in the introduction, there are many negative effects of single-family zoning in Seattle. This indicates that there is still a lot more single-family zoning than multifamily zoning today in Seattle. 
+
+## Number of Completed New Residential Permits by Class Over Time:
+```{r, echo = FALSE}
+# Fourth Visualization ("Number of Completed New Residential Permits by Class Over Time") - Bar Graph
+
+# Creates a dataframe that counts the number of permits class each year
+complete_permit_class <- permit_df %>% 
+  filter(StatusCurrent == "Completed") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  group_by(PermitClass) %>%
+  count(IssuedYear)
+
+# Make a side by side bar plot that shows the number of different completed new permit classes issued each year 
+ggplot(data = complete_permit_class, aes(x = IssuedYear, y = n, fill = PermitClass)) + 
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.75) +
+  labs(title = "Number of Completed New Residential Permits by Class Each Year",
+       x = "Year",
+       y = "Number of Completed New Residential Permits") + 
+  geom_text(aes(label = n), fontface = "bold", vjust = 1.2,
+             position = position_dodge(.9), size = 4) +
+  labs(fill = "Class of Permit") +
+  theme_bw() 
+```
+
+Figure 4: This plot shows the number of new permits that are completed by class over time.
+
+There are several patterns we can observe from this bar graph. First, we can see the number of new multifamily permits that are completed decreases as time increases except for 2019. Second, we can see that the new single-family permits that are completed decline over time. Third, we can see that the number of completed multifamily permits is less than that of single-family permits every year. In Seattle today, most of the area is still designated for single-family housing only. Thus, it is not surprising to see that there are way more single-family permits that are completed than the number of multifamily every single year. As figure 2 has shown, the number of residential permits that are completed has decreased dramatically since 2019. Thus, it is also not surprising to see the general decrease pattern in both multifamily and single-family permits.
+
+## Estimated Cost of Each Housing Unit by Class:
+``` {r, echo = FALSE}
+# Fifth Visualization ("Estimated Cost of Each Housing Unit by Class") - Histogram
+
+# Create a dataframe and computes the estimated cost of each unit
+cost_per_unit <- permit_df %>% 
+  filter(PermitClassMapped == "Residential") %>%
+  filter(HousingUnitsRemoved == 0) %>%
+  filter(HousingUnitsAdded != 0 & HousingUnitsAdded != 'NA') %>%
+  filter(EstProjectCost != 0 & EstProjectCost < 2000000) %>% # Exclude one value that would have affected the mean too much 
+  filter(PermitTypeMapped == "Building") %>%
+  mutate(estCost_unit = EstProjectCost / HousingUnitsAdded)
+
+# Change the order of the legend for better visualization
+cost_per_unit$PermitClass <- factor(cost_per_unit$PermitClass, levels = c("Single Family/Duplex", "Multifamily"))
+
+# Create a histogram that shows the estimated cost per unit by class
+ggplot(data = cost_per_unit,
+       aes(x = estCost_unit, fill = PermitClass)) + 
+  geom_histogram(position="identity", alpha=0.5, binwidth = 100000) +
+  geom_vline(aes(xintercept=mean(estCost_unit)),
+            color="blue", linetype="dashed", size=1) +
+  labs(title = "Amount of Estimated Cost of Each Housing Unit by Class",
+       x = "Estimated Cost of Each Housing Unit",
+       y = "Count") + 
+  labs(fill = "Class of Permit") +
+  theme_bw() 
+```
+
+Figure 5: This plot shows the estimated cost of each housing unit by class. (Note: One outlier has been excluded from the graph.)
+
+There are several patterns we can observe from this histogram. First, we can see that the estimated cost of single-family housing units has overlapped the estimated cost of multifamily housing units, which indicates that the number of single-family housing unit's is higher than the multifamily housing units. Second, we can see that the maximum estimated cost of multifamily units is around 500,000, while the maximum estimated cost of single-family units is more than 1,000,000. This is double the estimated cost of the maximum estimated cost of multifamily units. Also, we can see that there are a lot of single-family housing units with estimated costs that are the same or more than the maximum estimated cost of the multifamily housing units. The high estimated costs of these housing units, especially the single-family ones, is likely an indication of the high housing price since the housing price needs to be higher than the estimated cost to make a profit. The mean of estimated cost of these units is around 250000. This means that the housing price is also going to be quite high on average which will hurt the lower income families.
+
+## New Residential Permits Issued Distribution in Seattle:
+```{r, echo = FALSE}
+# Sixth Visualization ("New Residential Permits Issued Distribution in Seattle") - Bar Graph
+
+# Make a dataframe that contains the permit class, neighborhood district, and number of issued new residential permits by neighborhood district
+issued_permit_district <- permit_df %>% 
+  filter(StatusCurrent == "Issued") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  filter(NeighborhoodDistrict != "NA") %>%
+  group_by(PermitClass) %>%
+  count(NeighborhoodDistrict)
+
+# Make a side by side bar plot that shows the number of issued new residential permits by neighborhood district
+ggplot(data = issued_permit_district, aes(x = NeighborhoodDistrict, y = n, fill = PermitClass)) + 
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.75) +
+  labs(title = "Number of New Residential Permits Issued by Neighborhood District",
+       x = "Neighborhood District",
+       y = "Number of New Residential Permits Issued ") + 
+  geom_text(aes(label = n), fontface = "bold", vjust = 1.5,
+             position = position_dodge(.9), size = 2.2) +
+  labs(fill = "Class of Permit") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))
+```
+
+Figure 6: This plot shows the number of issued new residential permits by neighborhood district.
+
+For this plot, there are several things to notice. First, downtown Seattle has the least amount of issued new residential permits among all neighborhood districts. The majority of the neighborhood districts have more multifamily permits than single-family permits. There are three exceptions. Downtown Seattle has no new single-family residential permits that have been issued over the years. East Seattle has slightly more multifamily permits issued than single-family. In Southeast Seattle, the number of issued new residential permits is the same for both classes. There are still more new single-family residential permits issued in general, but the difference in some neighborhood districts is not too significant.
+
+## New Residential Permits Completed Distribution in Seattle:
+```{r, echo = FALSE}
+# Seventh Visualization ("New Residential Permits Completed Distribution in Seattle") - Bar Graph
+
+# Make a dataframe that conatins the permit class, issued year, and number of completed new residential permits by neighborhood district
+completed_permit_district <- permit_df %>% 
+  filter(StatusCurrent == "Completed") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  filter(NeighborhoodDistrict != "NA") %>%
+  group_by(PermitClass) %>%
+  count(NeighborhoodDistrict)
+
+# Make a side by side bar plot that shows the number of completed new residential permits by neighborhood district
+ggplot(data = completed_permit_district, aes(x = NeighborhoodDistrict, y = n, fill = PermitClass)) + 
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.75) +
+  labs(title = "Number of New Residential Permits  Completed by Neighborhood District",
+       x = "Neighborhood District",
+       y = "Number of New Residential Permits Completed") + 
+  geom_text(aes(label = n), fontface = "bold", vjust = 1.5,
+             position = position_dodge(.9), size = 2.2) +
+  labs(fill = "Class of Permit") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))
+```
+
+Figure 7: This plot shows the number of completed new residential permits by neighborhood district.
+
+There are several things we can tell from this plot. First, as figure 6 suggested, the least amount of new residential permits were issued in downtown Seattle. In this plot, the neighborhood district with the least amount of completed new residential permits is still downtown Seattle. Besides downtown Seattle, East Seattle has more new multifamily residential permits completed than single-family. Besides downtown Seattle and east Seattle, all other neighborhood districts have more new single-family permits completed than multifamily. The difference is large between the two classes, unlike figure 6. The neighborhood district with the most significant difference is Northeast Seattle, and the neighborhood district with the smallest difference is downtown Seattle. This plot suggests that, from 2017 to 2021, although the number of issued new residential permits for the two classes is not so different, there are still a lot more new single-family residential permits that are completed than the multifamily residential permits.
+
+## Conclusion
+
+In conclusion, the COVID-19 pandemic has not stopped the increase in new residential permits each year. However, it does seem like the COVID-19 pandemic has decreased the completion of the new residential permits from 2019 to 2021. This can be caused by many factors such as financial crisis, quarantine policies, etc. 
+
+For permit classes, there are more new single-family permits than new multifamily permits each year in terms of issued and completed permits. The estimated cost of each housing unit for multifamily permits is less than that of single-family permits. These results once again confirm the negative effects of single-family zoning in Seattle, such as low-income families cannot afford the extreme price of single-family homes. These negative effects of single-family zoning in Seattle continue to further residential segregation and concentrate poverty and wealth within distinct regions.
+
+Knowing the harmful effects of single-family zoning in Seattle, we are curious to see where these new multifamily and single-family permits are issued and completed in Seattle. We found out that Downtown does not have any new single-family permits issued or completed from 2017 to 2021. We found out that almost every single neighborhood district in Seattle has more new single-family permits issued and completed than new multifamily permits. Northeast Seattle has the greatest difference in the number of completed new single-family and multifamily permits in terms of completion. The local government must look at such analysis and realize the negative effects of single-family zoning and where these are distributed to minimize residential segregation.
+
+# Appendix: All code for this report
+```{r setup, eval = FALSE}
+# Load tidyverse package 
+library(tidyverse)
+# Load data
+permit_df <- read_csv("./Building_Permits_Clean.csv")
+```
+
+
+```{r visualization 1, eval = FALSE}
+# First Visualization ("New Residential Permits Issued Over Time") - Line Plot
+
+# Create a dataframe that contains years and the number of issued residential permits
+num_permits_year <- permit_df %>% 
+  filter(StatusCurrent == "Issued") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  group_by(IssuedYear) %>%
+  summarise(permits_per_year = n())
+# Make a line plot of the number of residential permits issued each year
+ggplot(data = num_permits_year, aes(x = IssuedYear, y = permits_per_year)) + 
+  geom_line(color = "red") +
+  geom_point() +
+  labs(title = "Number of New Residential Permits Issued Each Year",
+       x = "Year",
+       y = "Number of New Residential Permits Issued") +
+   theme_bw()
+```
+
+
+```{r visualization 2, eval=FALSE}
+# Second Visualization ("New Residential Permits Completed Over Time") - Line Plot
+
+# Create a dataframe that contains the number of completed new residential permits and years
+completed_residential <- permit_df %>% 
+  filter(StatusCurrent == "Completed") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  group_by(IssuedYear) %>%
+  summarise(completed_permits = n())
+# Make a line plot that shows the number of completed new residential permits each year
+ggplot(data = completed_residential, aes(x = IssuedYear, y = completed_permits)) + 
+  geom_line(color = "red") +
+  geom_point() +
+  labs(title = "Total Number of Completed New Residential Permits per Year",
+       x = "Year",
+       y = "Number of New Completed Residential Permits") +
+   theme_bw()
+```
+
+```{r visualization 3, eval = FALSE}
+# Third Visualization ("Number of Issued New Residential Permits by Class Over Time") - Bar Graph
+
+# Make a dataframe that conatins the permit class, issued year, and number of each permit class by year
+issued_permit_class <- permit_df %>% 
+  filter(StatusCurrent == "Issued") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  group_by(PermitClass) %>%
+  count(IssuedYear)
+
+# Make a side by side bar plot that shows the number of issued new permits by class each year
+ggplot(data = issued_permit_class, aes(x = IssuedYear, y = n, fill = PermitClass)) + 
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.75) +
+  labs(title = "Number of Issued New Residential Permits by Class Each Year",
+       x = "Year",
+       y = "Number of Issued New Residential Permits") + 
+  geom_text(aes(label = n), fontface = "bold", vjust = 1.5,
+             position = position_dodge(.9), size = 4) +
+  labs(fill = "Class of Permit") +
+  theme_bw() 
+```
+
+```{r visualization 4, eval = FALSE}
+# Fourth Visualization ("Number of Completed New Residential Permits by Class Over Time") - Bar Graph
+
+# Creates a dataframe that counts the number of permits class each year
+complete_permit_class <- permit_df %>% 
+  filter(StatusCurrent == "Completed") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  group_by(PermitClass) %>%
+  count(IssuedYear)
+
+# Make a side by side bar plot that shows the number of different completed new permit classes issued each year 
+ggplot(data = complete_permit_class, aes(x = IssuedYear, y = n, fill = PermitClass)) + 
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.75) +
+  labs(title = "Number of Completed New Residential Permits by Class Each Year",
+       x = "Year",
+       y = "Number of Completed New Residential Permits") + 
+  geom_text(aes(label = n), fontface = "bold", vjust = 1.2,
+             position = position_dodge(.9), size = 4) +
+  labs(fill = "Class of Permit") +
+  theme_bw() 
+```
+
+``` {r visualization 5, eval = FALSE}
+# Fifth Visualization ("Estimated Cost of Each Housing Unit by Class") - Histogram
+
+# Create a dataframe and computes the estimated cost of each unit
+cost_per_unit <- permit_df %>% 
+  filter(PermitClassMapped == "Residential") %>%
+  filter(HousingUnitsRemoved == 0) %>%
+  filter(HousingUnitsAdded != 0 & HousingUnitsAdded != 'NA') %>%
+  filter(EstProjectCost != 0 & EstProjectCost < 2000000) %>% # Exclude one value that would have affected the mean too much 
+  filter(PermitTypeMapped == "Building") %>%
+  mutate(estCost_unit = EstProjectCost / HousingUnitsAdded)
+
+# Change the order of the legend for better visualization
+cost_per_unit$PermitClass <- factor(cost_per_unit$PermitClass, levels = c("Single Family/Duplex", "Multifamily"))
+
+# Create a histogram that shows the estimated cost per unit by class
+ggplot(data = cost_per_unit,
+       aes(x = estCost_unit, fill = PermitClass)) + 
+  geom_histogram(position="identity", alpha=0.5, binwidth = 100000) +
+  geom_vline(aes(xintercept=mean(estCost_unit)),
+            color="blue", linetype="dashed", size=1) +
+  labs(title = "Amount of Estimated Cost of Each Housing Unit by Class",
+       x = "Estimated Cost of Each Housing Unit",
+       y = "Count") + 
+  labs(fill = "Class of Permit") +
+  theme_bw() 
+```
+
+```{r visualization 6, eval = FALSE}
+# Sixth Visualization ("New Residential Permits Issued Distribution in Seattle") - Bar Graph
+
+# Make a dataframe that contains the permit class, neighborhood district, and number of issued new residential permits by neighborhood district
+issued_permit_district <- permit_df %>% 
+  filter(StatusCurrent == "Issued") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  filter(NeighborhoodDistrict != "NA") %>%
+  group_by(PermitClass) %>%
+  count(NeighborhoodDistrict)
+
+# Make a side by side bar plot that shows the number of issued new residential permits by neighborhood district
+ggplot(data = issued_permit_district, aes(x = NeighborhoodDistrict, y = n, fill = PermitClass)) + 
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.75) +
+  labs(title = "Number of New Residential Permits Issued by Neighborhood District",
+       x = "Neighborhood District",
+       y = "Number of New Residential Permits Issued ") + 
+  geom_text(aes(label = n), fontface = "bold", vjust = 1.5,
+             position = position_dodge(.9), size = 2.2) +
+  labs(fill = "Class of Permit") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))
+```
+
+```{r visualiztion 7, eval = FALSE}
+# Seventh Visualization ("New Residential Permits Completed Distribution in Seattle") - Bar Graph
+
+# Make a dataframe that conatins the permit class, issued year, and number of completed new residential permits by neighborhood district
+completed_permit_district <- permit_df %>% 
+  filter(StatusCurrent == "Completed") %>%
+  filter(PermitClassMapped == "Residential") %>%
+  filter(PermitTypeDesc == "New") %>%
+  filter(NeighborhoodDistrict != "NA") %>%
+  group_by(PermitClass) %>%
+  count(NeighborhoodDistrict)
+
+# Make a side by side bar plot that shows the number of completed new residential permits by neighborhood district
+ggplot(data = completed_permit_district, aes(x = NeighborhoodDistrict, y = n, fill = PermitClass)) + 
+  geom_bar(stat = "identity", position = position_dodge(), alpha = 0.75) +
+  labs(title = "Number of New Residential Permits Completed by Neighborhood District",
+       x = "Neighborhood District",
+       y = "Number of New Residential Permits Completed") + 
+  geom_text(aes(label = n), fontface = "bold", vjust = 1.5,
+             position = position_dodge(.9), size = 2.2) +
+  labs(fill = "Class of Permit") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1))
+```
