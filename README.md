@@ -1,2 +1,2 @@
-# Statistical Enginering
+# Statistical Engineering
  Statistical Programming Projects
